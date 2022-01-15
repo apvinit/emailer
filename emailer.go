@@ -1,4 +1,4 @@
-package emailers
+package emailer
 
 import (
 	"bytes"
