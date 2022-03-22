@@ -137,12 +137,15 @@ func (c *Client) connnect() (err error) {
 	if err != nil {
 		return err
 	}
-	c.smtp.StartTLS(&tls.Config{InsecureSkipVerify: true})
-	auth := smtp.CRAMMD5Auth(c.username, c.password)
-	err = c.smtp.Auth(auth)
-	if err != nil {
-		log.Fatal("error authenticating ", err)
-		return err
+	var auth smtp.Auth
+	err = c.smtp.StartTLS(&tls.Config{InsecureSkipVerify: true})
+	if err == nil {
+		auth = smtp.PlainAuth("", c.username, c.password, c.host)
+	} else {
+		// server doesn't support tls, use cram-mds
+		auth = smtp.CRAMMD5Auth(c.username, c.password)
 	}
+	err = c.smtp.Auth(auth)
+
 	return
 }
