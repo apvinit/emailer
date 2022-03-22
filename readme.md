@@ -6,7 +6,7 @@ send multiple email using single client
 ```go
 func main() {
   var client *emailer.Client
-  client, err := NewClient(Options{
+  client, err := emailer.NewClient(Options{
 		Host: "smtp-test.example.com",
 		Port: "1025",
 		User: "username",
