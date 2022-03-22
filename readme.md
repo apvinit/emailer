@@ -6,8 +6,14 @@ send multiple email using single client
 ```go
 func main() {
   var client *emailer.Client
-  var clientX sync.Mutex
-  client, err = emailer.NewClient("Sender Name", "user@email.com", "user@email.com", "password", "smtp.gmail.com", "smtp.gmail.com:587", &clientX)
+  client, err := NewClient(Options{
+		Host: "smtp-test.example.com",
+		Port: "1025",
+		User: "username",
+		Pass: "password",
+		Name: "Example User",
+		From: "user@example.com",
+	})
 	if err != nil {
 		log.Fatal("Could not initialize client Emailer")
 	}
@@ -22,6 +28,5 @@ func main() {
 		Body:    buf,
 	}
 	mail.SendWith(client)
-
 }
 ```

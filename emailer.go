@@ -10,21 +10,45 @@ import (
 	"sync"
 )
 
+// A Client represent a connection to smtp server with identity
 type Client struct {
+	// Name of the client
 	name     string
 	username string
 	password string
-	host     string
-	addr     string
-	from     string
-	sender   string
-	smtp     *smtp.Client
-	m        *sync.Mutex
+	// smtp sever without port
+	host string
+	// smtp sever address with port
+	addr   string
+	from   string
+	sender string
+	smtp   *smtp.Client
+	mu     *sync.Mutex
 }
 
-// NewClient create a smtp client using the credentials passed
-func NewClient(name, from, username, password, host, addr string, m *sync.Mutex) (*Client, error) {
-	c := &Client{name, username, password, host, addr, from, fmt.Sprintf("%s <%s>", name, from), nil, m}
+type Options struct {
+	Host string // smtp host
+	Port string // smtp port
+	User string // smtp username
+	Pass string // smtp password
+	Name string // sender name for the client
+	From string // sender email for the client
+}
+
+// NewClient create a emailer client for sending emails using provided
+// smtp sevice provider
+func NewClient(o Options) (*Client, error) {
+	var mu sync.Mutex
+	c := &Client{
+		name:     o.Name,
+		username: o.User,
+		password: o.Pass,
+		host:     o.Host,
+		addr:     fmt.Sprintf("%s:%s", o.Host, o.Port),
+		from:     o.From,
+		sender:   fmt.Sprintf("%s <%s>", o.Name, o.From),
+		mu:       &mu,
+	}
 	err := c.connnect()
 	if err != nil {
 		return nil, err
@@ -45,6 +69,7 @@ type Mail struct {
 	sender  string
 	To      []string
 	Cc      []string
+	Bcc     []string
 	Subject string
 	Body    bytes.Buffer
 }
@@ -55,14 +80,15 @@ func (mail *Mail) BuildMail() string {
 	msg.WriteString(fmt.Sprintf("From: %s\r\n", mail.sender))
 	msg.WriteString(fmt.Sprintf("To: %s\r\n", strings.Join(mail.To, ";")))
 	msg.WriteString(fmt.Sprintf("Cc: %s\r\n", strings.Join(mail.Cc, ";")))
+	msg.WriteString(fmt.Sprintf("Bcc: %s\r\n", strings.Join(mail.Bcc, ";")))
 	msg.WriteString(fmt.Sprintf("Subject: %s\r\n", mail.Subject))
 	msg.WriteString(fmt.Sprintf("\r\n%s\r\n", mail.Body.String()))
 	return msg.String()
 }
 
 func (c *Client) sendMail(mail *Mail) error {
-	c.m.Lock()
-	defer c.m.Unlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	mail.sender = c.sender
 	err := c.smtp.Noop()
 	if err != nil {
@@ -112,7 +138,7 @@ func (c *Client) connnect() (err error) {
 		return err
 	}
 	c.smtp.StartTLS(&tls.Config{InsecureSkipVerify: true})
-	auth := smtp.PlainAuth("", c.username, c.password, c.host)
+	auth := smtp.CRAMMD5Auth(c.username, c.password)
 	err = c.smtp.Auth(auth)
 	if err != nil {
 		log.Fatal("error authenticating ", err)
