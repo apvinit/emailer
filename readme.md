@@ -18,9 +18,8 @@ func main() {
 		log.Fatal("Could not initialize client Emailer")
 	}
 
-  var buf bytes.Buffer
-	tmpl := template.Must(template.ParseFiles("email-template.tmpl.html"))
-	tmpl.Execute(&buf, nil)
+ 	var buf bytes.Buffer
+	buf.WriteString("Test message content")
 
 	mail := emailer.Mail{
 		To:      []string{"test@user.com"},
